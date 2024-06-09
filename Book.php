@@ -1,202 +1,91 @@
 <?php
+  session_start();
+  $book_isbn = $_GET['bookisbn'];
+  // connecto database
+  require_once "./functions/database_functions.php";
+  $conn = db_connect();
 
-spl_autoload_register(function ($class){
-    $arr=['goods','interfaces','orders','reviews','serve','customer'];
-    foreach ($arr as $val) {
-        $path=__DIR__."/../$val/$class.php";
-        if (file_exists($path))
-            require_once $path;
-    }
-});
+  $query = "SELECT * FROM books WHERE book_isbn = '$book_isbn'";
+  $result = mysqli_query($conn, $query);
+  if(!$result){
+    echo "Can't retrieve data " . mysqli_error($conn);
+    exit;
+  }
 
-class Book implements Damage
-{
-    private $id;
-    private $name;
-    private $author;
-    private $publisher;
-    private $genre;
-    private $isbn;
-    private $sellPrice;
-    private $buyPrice;
-    private $image;
-    private $description;
-    private $actualQuantity;
-    private $quantity;
-    private static $objects=[];
+  $row = mysqli_fetch_assoc($result);
+  if(!$row){
+    echo "Empty book";
+    exit;
+  }
 
-    /**
-     * Book constructor.
-     * @param $id
-     * @param $author
-     * @param $publisher
-     * @param $genre
-     * @param $isbn
-     * @param $sellPrice
-     * @param $buyPrice
-     * @param $image
-     * @param $description
-     * @param $actualQuantity
-     * @param $quantity
-     */
-    public function __construct($id, $name,int $isbn,float $sellPrice,float $buyPrice,string $image,string $description,int $actualQuantity,int $quantity,Author $author=NULL,Publishers $publisher=NULL, Genre $genre=NULL)
-    {
-        $this->id = $id;
-        $this->name=$name;
-        $this->author = $author;
-        $this->publisher = $publisher;
-        $this->genre = $genre;
-        $this->isbn = $isbn;
-        $this->sellPrice = $sellPrice;
-        $this->buyPrice = $buyPrice;
-        $this->image = $image;
-        $this->description = $description;
-        $this->actualQuantity = $actualQuantity;
-        $this->quantity = $quantity;
-        Book::$objects[$this->id]=$this;
-    }
-
-
-    public function buy($quantity=1):bool{
-        if ($this->quantity>=$quantity) {
-            $this->quantity -= $quantity;
-            return true;
-        }
-        return false;
-    }
-
-    public function add($quantity){
-         $this->quantity+=$quantity;
-         $this->actualQuantity+=$quantity;
-    }
-
-    public function backBook ($amount){
-        $this->quantity+=$amount;
-    }
-
-    public function delivering_done($amount){
-        $this->actualQuantity-=$amount;
-    }
-
-    public function damageAllData()
-    {
-        $this->id=NULL;
-        $this->name=NULL;
-        $this->quantity=NULL;
-        $this->author=NULL;
-        $this->isbn=NULL;
-        $this->buyPrice=NULL;
-        $this->sellPrice=NULL;
-        $this->image=NULL;
-        $this->description=NULL;
-        $this->actualQuantity=NULL;
-        $this->genre=NULL;
-    }
-
-    /**
-     * @return mixed
-     */
-    public function getId():int
-    {
-        return $this->id;
-    }
-
-    /**
-     * @return string
-     */
-    public function getName(): string
-    {
-        return $this->name;
-    }
-
-    /**
-     * @return Author
-     */
-    public function getAuthor(): Author
-    {
-        return $this->author;
-    }
-
-    /**
-     * @return publisher
-     */
-    public function getPublisher(): Publishers
-    {
-        return $this->publisher;
-    }
-
-    /**
-     * @return Genre
-     */
-    public function getGenre(): Genre
-    {
-        return $this->genre;
-    }
-
-    /**
-     * @return int
-     */
-    public function getIsbn(): int
-    {
-        return $this->isbn;
-    }
-
-    /**
-     * @return float
-     */
-    public function getSellPrice(): float
-    {
-        return $this->sellPrice;
-    }
-
-    /**
-     * @return float
-     */
-    public function getBuyPrice(): float
-    {
-        return $this->buyPrice;
-    }
-
-    /**
-     * @return string
-     */
-    public function getImage(): string
-    {
-        return $this->image;
-    }
-
-    /**
-     * @return string
-     */
-    public function getDescription(): string
-    {
-        return $this->description;
-    }
-
-    /**
-     * @return int
-     */
-    public function getActualQuantity(): int
-    {
-        return $this->actualQuantity;
-    }
-
-    /**
-     * @return int
-     */
-    public function getQuantity(): int
-    {
-        return $this->quantity;
-    }
-
-    /**
-     * @return array
-     */
-    public static function getObjects(): array
-    {
-        return self::$objects;
-    }
-
-
-
-}
+  $title = $row['book_title'];
+  require "./template/header.php";
+?>
+      <!-- Example row of columns -->
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item active" aria-current="page"><?php echo $row['book_title']; ?></li>
+        </ol>
+      </nav>
+      <div class="row">
+        <div class="col-md-3 text-center book-item">
+          <div class="img-holder overflow-hidden">
+          <img class="img-top" src="./bootstrap/img/<?php echo $row['book_image']; ?>">
+          </div>
+        </div>
+        <div class="col-md-9">
+          <div class="card rounded-0 shadow">
+            <div class="card-body">
+              <div class="container-fluid">
+                <h4><?= $row['book_title'] ?></h4>
+                <hr>
+                  <p><?php echo $row['book_descr']; ?></p>
+                  <h4>Details</h4>
+                  <table class="table">
+                    <?php foreach($row as $key => $value){
+                      if($key == "book_descr" || $key == "book_image" || $key == "publisherid" || $key == "book_title"){
+                        continue;
+                      }
+                      switch($key){
+                        case "book_isbn":
+                          $key = "ISBN";
+                          break;
+                        case "book_title":
+                          $key = "Title";
+                          break;
+                        case "book_author":
+                          $key = "Author";
+                          break;
+                        case "book_price":
+                          $key = "Price";
+                          break;
+                      }
+                    ?>
+                    <tr>
+                      <td><?php echo $key; ?></td>
+                      <td><?php echo $value; ?></td>
+                    </tr>
+                    <?php 
+                      } 
+                      if(isset($conn)) {mysqli_close($conn); }
+                    ?>
+                  </table>
+                  <form method="post" action="cart.php">
+                    <input type="hidden" name="bookisbn" value="<?php echo $book_isbn;?>">
+                    <?php if(isset($_SESSION['admin']) && $_SESSION['admin'] == true): ?>
+                		<div></div>
+                    <?php else: ?>
+                             <div class="text-end">
+                                <input type="submit" value="Purchase / Add to cart" name="cart" class="btn btn-dark rounded-0">
+                              </div>
+                    <?php endif; ?>
+                    
+                  </form>
+              </div>
+            </div>
+          </div>
+       	</div>
+      </div>
+<?php
+  require "./template/footer.php";
+?>
